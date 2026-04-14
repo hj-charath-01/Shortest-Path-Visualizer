@@ -1,4 +1,4 @@
-# Route Planner — Advanced Graph Algorithms Project
+# Route Planner 
 
 An interactive city-map route planner implementing and comparing three
 classic shortest-path algorithms with step-by-step animation.

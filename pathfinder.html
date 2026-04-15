@@ -3,900 +3,492 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pathfinding Visualizer – CS Project</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<title>OSM Pathfinding Visualizer</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-  /* ==========================================
-     CSS Variables & Reset
-  ========================================== */
-  :root {
-    --bg:        #1a1a2e;
-    --surface:   #16213e;
-    --panel:     #0f3460;
-    --accent:    #e94560;
-    --green:     #00d084;
-    --yellow:    #f9c74f;
-    --blue:      #4cc9f0;
-    --purple:    #b5179e;
-    --text:      #e0e0e0;
-    --muted:     #8892a4;
-    --border:    #2a3a5e;
-    --radius:    8px;
-    --font-mono: 'JetBrains Mono', monospace;
-    --font-sans: 'Nunito', sans-serif;
-  }
-
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f0f0f0; height: 100vh; display: flex; flex-direction: column; }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-sans);
-    min-height: 100vh;
-    padding: 20px;
-  }
-
-  /* ==========================================
-     Header
-  ========================================== */
-  .header {
-    text-align: center;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 2px dashed var(--border);
-  }
-  .header h1 {
-    font-family: var(--font-mono);
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--blue);
-    letter-spacing: -0.5px;
-  }
-  .header h1 span { color: var(--accent); }
-  .header p {
-    color: var(--muted);
-    font-size: 13px;
-    margin-top: 6px;
-  }
-  .badge {
-    display: inline-block;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    color: var(--blue);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    padding: 2px 10px;
-    border-radius: 99px;
-    margin-top: 8px;
-  }
-
-  /* ==========================================
-     Layout
-  ========================================== */
-  .layout {
-    display: flex;
-    gap: 20px;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    max-width: 1100px;
-    margin: 0 auto;
-  }
-
-  .main-col { flex: 1 1 500px; }
-  .side-col  { width: 220px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; }
-
-  /* ==========================================
-     Cards / panels
-  ========================================== */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px;
-  }
-  .card-title {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--muted);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-  }
-
-  /* ==========================================
-     Toolbar
-  ========================================== */
-  .toolbar {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    align-items: center;
-    margin-bottom: 10px;
-  }
-  .toolbar-label {
-    font-size: 11px;
-    color: var(--muted);
-    font-family: var(--font-mono);
-    margin-right: 2px;
-  }
-  .spacer { flex: 1; }
-
-  /* ==========================================
-     Buttons
-  ========================================== */
-  button {
-    font-family: var(--font-sans);
-    cursor: pointer;
-    border: none;
-    border-radius: 6px;
-    font-size: 13px;
-    padding: 5px 12px;
-    transition: all 0.15s;
-  }
-  button:active { transform: scale(0.97); }
-
-  .btn-mode {
-    background: var(--bg);
-    border: 1.5px solid var(--border);
-    color: var(--muted);
-  }
-  .btn-mode.active-wall   { border-color: var(--accent); color: var(--accent); background: #2a1520; }
-  .btn-mode.active-erase  { border-color: var(--yellow); color: var(--yellow); background: #2a2010; }
-  .btn-mode.active-start  { border-color: var(--green);  color: var(--green);  background: #102a18; }
-  .btn-mode.active-end    { border-color: var(--purple); color: var(--purple); background: #1e1030; }
-
-  .btn-tool {
-    background: var(--bg);
-    border: 1.5px solid var(--border);
-    color: var(--muted);
-  }
-  .btn-tool:hover { border-color: var(--blue); color: var(--blue); }
-
-  .btn-run {
-    width: 100%;
-    padding: 10px;
-    font-size: 14px;
-    font-weight: 700;
-    background: var(--accent);
-    color: #fff;
-    letter-spacing: 0.03em;
-  }
-  .btn-run:hover { background: #ff5a74; }
-  .btn-run.running { background: #555; }
-
-  .btn-clear-path {
-    width: 100%;
-    padding: 7px;
-    font-size: 12px;
-    background: var(--bg);
-    border: 1.5px solid var(--border);
-    color: var(--muted);
-  }
-  .btn-clear-path:hover { border-color: var(--blue); color: var(--blue); }
-
-  /* ==========================================
-     Algorithm picker
-  ========================================== */
-  .algo-btn {
-    display: block;
-    width: 100%;
-    text-align: left;
-    padding: 9px 10px;
-    margin-bottom: 5px;
-    background: var(--bg);
-    border: 1.5px solid var(--border);
-    color: var(--muted);
-    border-radius: 7px;
-    font-size: 12px;
-  }
-  .algo-btn.selected {
-    border-color: var(--blue);
-    color: var(--blue);
-    background: #0d2035;
-    font-weight: 700;
-  }
-
-  /* ==========================================
-     Speed buttons
-  ========================================== */
-  .speed-row { display: flex; gap: 5px; }
-  .speed-btn {
-    flex: 1;
-    padding: 6px 0;
-    font-size: 11px;
-    background: var(--bg);
-    border: 1.5px solid var(--border);
-    color: var(--muted);
-    font-family: var(--font-mono);
-  }
-  .speed-btn.selected {
-    border-color: var(--green);
-    color: var(--green);
-    background: #0a2018;
-  }
-
-  /* ==========================================
-     Canvas wrapper
-  ========================================== */
-  #canvas-wrap {
-    border: 2px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    display: inline-block;
-    max-width: 100%;
-    background: #111827;
-  }
-  #grid-canvas {
-    display: block;
-    max-width: 100%;
-    cursor: crosshair;
-  }
-
-  /* ==========================================
-     Legend
-  ========================================== */
-  .legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-top: 10px;
-  }
-  .legend-item {
+  .topbar {
+    background: white;
+    border-bottom: 1px solid #ccc;
+    padding: 10px 16px;
     display: flex;
     align-items: center;
-    gap: 5px;
-    font-size: 11px;
-    color: var(--muted);
-    font-family: var(--font-mono);
-  }
-  .legend-dot {
-    width: 12px; height: 12px;
-    border-radius: 3px;
-    border: 1px solid rgba(255,255,255,0.1);
+    gap: 14px;
+    flex-wrap: wrap;
     flex-shrink: 0;
   }
+  .topbar h1 { font-size: 16px; font-weight: bold; color: #222; white-space: nowrap; }
 
-  /* ==========================================
-     Stats / Results
-  ========================================== */
-  .status-badge {
-    display: inline-block;
-    padding: 3px 12px;
-    border-radius: 99px;
-    font-size: 11px;
-    font-family: var(--font-mono);
-    font-weight: 700;
-    margin-bottom: 10px;
-  }
-  .status-idle    { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
-  .status-running { background: #2a2010; color: var(--yellow); border: 1px solid var(--yellow); }
-  .status-found   { background: #0a2018; color: var(--green);  border: 1px solid var(--green); }
-  .status-nope    { background: #2a1520; color: var(--accent); border: 1px solid var(--accent); }
-
-  .stat-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 6px 0;
-    border-top: 1px solid var(--border);
+  .algo-tabs { display: flex; gap: 4px; }
+  .tab {
+    padding: 5px 12px;
     font-size: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    font-family: Arial, sans-serif;
+    color: #555;
   }
-  .stat-label { color: var(--muted); font-family: var(--font-mono); }
-  .stat-val   { font-weight: 700; color: var(--text); font-family: var(--font-mono); }
+  .tab:hover { background: #f5f5f5; }
+  .tab.active { font-weight: bold; }
+  .tab.t-dijk.active  { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
+  .tab.t-astar.active { background: #dcfce7; border-color: #22c55e; color: #15803d; }
+  .tab.t-bidir.active { background: #f3e8ff; border-color: #a855f7; color: #7e22ce; }
 
-  /* ==========================================
-     About / tips
-  ========================================== */
-  .about-text {
-    font-size: 11.5px;
-    color: var(--muted);
-    line-height: 1.7;
-  }
+  .speed-group { display: flex; gap: 4px; align-items: center; font-size: 12px; color: #777; }
+  .spd { padding: 4px 10px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer; font-family: Arial; }
+  .spd.active { background: #fef9c3; border-color: #ca8a04; color: #854d0e; font-weight: bold; }
 
-  .tips-list {
-    list-style: none;
-    padding: 0;
+  .run-btn {
+    padding: 6px 18px;
+    font-size: 13px;
+    font-weight: bold;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
   }
-  .tips-list li {
-    font-size: 11px;
-    color: var(--muted);
-    line-height: 2;
-    font-family: var(--font-mono);
-  }
-  .tips-list li::before {
-    content: '→ ';
-    color: var(--blue);
-  }
+  .run-btn:hover { background: #1d4ed8; }
+  .run-btn.stop { background: #dc2626; }
+  .run-btn.stop:hover { background: #b91c1c; }
 
-  /* ==========================================
-     Footer
-  ========================================== */
-  .footer {
-    text-align: center;
-    margin-top: 28px;
-    font-size: 11px;
-    color: var(--border);
-    font-family: var(--font-mono);
-    padding-top: 14px;
-    border-top: 1px dashed var(--border);
+  .clear-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    font-family: Arial;
+    color: #555;
   }
-  .footer a { color: var(--muted); text-decoration: none; }
-  .footer a:hover { color: var(--blue); }
+  .clear-btn:hover { background: #f5f5f5; }
 
-  /* ==========================================
-     Responsive
-  ========================================== */
-  @media (max-width: 720px) {
-    .side-col { width: 100%; }
-    .header h1 { font-size: 22px; }
+  .spacer { flex: 1; }
+
+  .stats {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: #555;
+    align-items: center;
   }
+  .stat { display: flex; flex-direction: column; align-items: center; }
+  .stat-val { font-weight: bold; font-size: 14px; color: #222; }
+  .stat-lbl { color: #999; font-size: 11px; }
+
+  #map { flex: 1; }
+
+  .legend {
+    position: absolute;
+    bottom: 20px;
+    left: 16px;
+    z-index: 1000;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #444;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    min-width: 170px;
+  }
+  .legend h4 { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .leg-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .leg-line { width: 28px; height: 4px; border-radius: 2px; flex-shrink: 0; }
+  .leg-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  .status-bar {
+    position: absolute;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    padding: 5px 16px;
+    font-size: 13px;
+    font-weight: bold;
+    color: #444;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    pointer-events: none;
+    display: none;
+  }
+  .status-bar.show { display: block; }
+  .status-bar.running { background: #fef9c3; color: #92400e; border-color: #fbbf24; }
+  .status-bar.found   { background: #dcfce7; color: #15803d; border-color: #4ade80; }
+  .status-bar.nope    { background: #fee2e2; color: #991b1b; border-color: #f87171; }
+
+  .info-box {
+    position: absolute;
+    bottom: 20px;
+    right: 16px;
+    z-index: 1000;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #444;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  }
+  .info-box h4 { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .info-row { display: flex; justify-content: space-between; gap: 20px; padding: 3px 0; border-top: 1px solid #f0f0f0; }
+  .info-val { font-weight: bold; color: #222; }
+
+  #load-overlay {
+    position: absolute; inset: 0; z-index: 2000;
+    background: rgba(255,255,255,0.92);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 14px;
+  }
+  #load-overlay h2 { font-size: 18px; color: #333; }
+  #load-overlay p  { font-size: 13px; color: #666; text-align: center; max-width: 400px; line-height: 1.6; }
+  .file-input-wrap {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center;
+  }
+  #file-input {
+    font-size: 13px; border: 1px solid #ccc; border-radius: 4px; padding: 6px 10px;
+    background: white; cursor: pointer; font-family: Arial;
+  }
+  .load-btn {
+    padding: 7px 18px; font-size: 13px; font-weight: bold;
+    background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer;
+    font-family: Arial;
+  }
+  .load-btn:hover { background: #1d4ed8; }
+  .demo-btn {
+    padding: 7px 18px; font-size: 13px;
+    background: white; color: #555; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;
+    font-family: Arial;
+  }
+  .demo-btn:hover { background: #f5f5f5; }
 </style>
 </head>
 <body>
 
-<!-- ===================== HEADER ===================== -->
-<div class="header">
-  <h1>Pathfinding <span>Visualizer</span></h1>
-  <p>Visualizing Dijkstra, A*, and Bidirectional Dijkstra on a grid graph</p>
-  <div class="badge">// CS Final Project</div>
-</div>
+<div class="topbar">
+  <h1>OSM Pathfinding Visualizer</h1>
 
-<!-- ===================== LAYOUT ===================== -->
-<div class="layout">
+  <div class="algo-tabs" id="algo-tabs"></div>
 
-  <!-- MAIN COLUMN -->
-  <div class="main-col">
-
-    <!-- Toolbar -->
-    <div class="toolbar">
-      <span class="toolbar-label">mode:</span>
-      <button class="btn-mode active-wall" id="btn-wall"  onclick="setMode('wall')">✏️ Wall</button>
-      <button class="btn-mode" id="btn-erase" onclick="setMode('erase')">🧹 Erase</button>
-      <button class="btn-mode" id="btn-start" onclick="setMode('start')">🟢 Start</button>
-      <button class="btn-mode" id="btn-end"   onclick="setMode('end')">🔴 End</button>
-      <div class="spacer"></div>
-      <button class="btn-tool" onclick="loadCity()">🏙 City</button>
-      <button class="btn-tool" onclick="loadMaze()">🌀 Maze</button>
-      <button class="btn-tool" onclick="clearAll()">🗑 Clear</button>
-    </div>
-
-    <!-- Canvas -->
-    <div id="canvas-wrap">
-      <canvas id="grid-canvas"></canvas>
-    </div>
-
-    <!-- Legend -->
-    <div class="legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#00d084"></div> Start</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#b5179e"></div> End</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#334155"></div> Wall</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#1e40af"></div> Visited (fwd)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#6d28d9"></div> Visited (bwd)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#f9c74f"></div> Path</div>
-    </div>
+  <div class="speed-group">
+    Speed:
+    <button class="spd" id="spd-Slow"   onclick="setSpeed('Slow')">Slow</button>
+    <button class="spd active" id="spd-Normal" onclick="setSpeed('Normal')">Normal</button>
+    <button class="spd" id="spd-Fast"   onclick="setSpeed('Fast')">Fast</button>
   </div>
 
-  <!-- SIDE COLUMN -->
-  <div class="side-col">
+  <button class="run-btn" id="run-btn" onclick="toggleRun()">&#9654; Run</button>
+  <button class="clear-btn" onclick="clearViz()">Clear</button>
 
-    <!-- Algorithm -->
-    <div class="card">
-      <div class="card-title">// Algorithm</div>
-      <button class="algo-btn" id="algo-Dijkstra"               onclick="setAlgo('Dijkstra')">Dijkstra</button>
-      <button class="algo-btn" id="algo-A*"                     onclick="setAlgo('A*')">A*</button>
-      <button class="algo-btn selected" id="algo-Bidirectional" onclick="setAlgo('Bidirectional')">Bidirectional Dijkstra</button>
-    </div>
+  <div class="spacer"></div>
 
-    <!-- Speed -->
-    <div class="card">
-      <div class="card-title">// Speed</div>
-      <div class="speed-row">
-        <button class="speed-btn" id="spd-Slow"   onclick="setSpeed('Slow')">Slow</button>
-        <button class="speed-btn selected" id="spd-Normal" onclick="setSpeed('Normal')">Normal</button>
-        <button class="speed-btn" id="spd-Fast"   onclick="setSpeed('Fast')">Fast</button>
-      </div>
-    </div>
-
-    <!-- Run / Stop -->
-    <button class="btn-run" id="run-btn" onclick="toggleRun()">▶  Run</button>
-    <button class="btn-clear-path" onclick="clearPath()">Clear Path</button>
-
-    <!-- Results -->
-    <div class="card">
-      <div class="card-title">// Results</div>
-      <div class="status-badge status-idle" id="status-badge">Ready</div>
-      <div class="stat-row"><span class="stat-label">visited</span><span class="stat-val" id="stat-visited">—</span></div>
-      <div class="stat-row"><span class="stat-label">path len</span><span class="stat-val" id="stat-path">—</span></div>
-      <div class="stat-row"><span class="stat-label">time</span><span class="stat-val" id="stat-time">—</span></div>
-    </div>
-
-    <!-- About -->
-    <div class="card">
-      <div class="card-title">// About</div>
-      <p class="about-text" id="algo-desc">
-        Bidirectional Dijkstra runs two searches simultaneously — from start and from end — and meets in the middle. This roughly halves the search space.
-      </p>
-    </div>
-
-    <!-- Tips -->
-    <div class="card">
-      <div class="card-title">// How to use</div>
-      <ul class="tips-list">
-        <li>Click + drag to draw walls</li>
-        <li>Set Start / End positions</li>
-        <li>Try City or Maze presets</li>
-        <li>Compare visited counts!</li>
-      </ul>
-    </div>
-
-  </div><!-- /side-col -->
-</div><!-- /layout -->
-
-<div class="footer">
-  built with vanilla JS + canvas &nbsp;·&nbsp;
-  algorithms: Dijkstra · A* · BiDir &nbsp;·&nbsp;
-  <a href="https://github.com">view source</a>
+  <div class="stats">
+    <div class="stat"><span class="stat-val" id="s-visited">—</span><span class="stat-lbl">visited</span></div>
+    <div class="stat"><span class="stat-val" id="s-path">—</span><span class="stat-lbl">path nodes</span></div>
+    <div class="stat"><span class="stat-val" id="s-cost">—</span><span class="stat-lbl">cost (s)</span></div>
+    <div class="stat"><span class="stat-val" id="s-time">—</span><span class="stat-lbl">compute</span></div>
+  </div>
 </div>
 
-<!-- ===================== SCRIPT ===================== -->
+<div style="position:relative; flex:1; display:flex; flex-direction:column;">
+  <div id="map"></div>
+
+  <div class="legend">
+    <h4>Legend</h4>
+    <div class="leg-row"><div class="leg-dot" style="background:#3b82f6"></div> Visited node (forward)</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#a855f7"></div> Visited node (backward)</div>
+    <div class="leg-row"><div class="leg-line" style="background:#f59e0b"></div> Shortest path</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#22c55e; width:14px; height:14px;"></div> Start</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#ef4444; width:14px; height:14px;"></div> End</div>
+  </div>
+
+  <div class="status-bar" id="status-bar">Ready</div>
+
+  <div class="info-box" id="info-box" style="display:none">
+    <h4 id="info-algo-name">—</h4>
+    <div class="info-row"><span>Visited</span><span class="info-val" id="ib-visited">—</span></div>
+    <div class="info-row"><span>Path nodes</span><span class="info-val" id="ib-path">—</span></div>
+    <div class="info-row"><span>Cost</span><span class="info-val" id="ib-cost">—</span></div>
+    <div class="info-row"><span>Compute</span><span class="info-val" id="ib-time">—</span></div>
+  </div>
+
+  <div id="load-overlay">
+    <h2>OSM Pathfinding Visualizer</h2>
+    <p>Run <code>python main.py --mode osm --place "Your City"</code> to generate <strong>results.json</strong>, then load it here to see the animated pathfinding.</p>
+    <div class="file-input-wrap">
+      <input type="file" id="file-input" accept=".json">
+      <button class="load-btn" onclick="loadFile()">Load results.json</button>
+      <button class="demo-btn" onclick="loadDemo()">Try Demo</button>
+    </div>
+    <p style="font-size:11px; color:#aaa;">Or drag &amp; drop results.json onto this page</p>
+  </div>
+</div>
+
 <script>
 'use strict';
 
-// ─── Config ─────────────────────────────────────────────────────────────────
-const ROWS = 20, COLS = 38, CS = 22;
-
-const CELL = { EMPTY:0, WALL:1, VF:2, VB:3, PATH:4 };
-
-const PALETTE = {
-  bg:      '#111827',
-  grid:    '#1e2d40',
-  wall:    '#334155',
-  start:   '#00d084',
-  end:     '#b5179e',
-  vf:      '#1e40af',  // forward visited
-  vb:      '#4c1d95',  // backward visited
-  path:    '#f9c74f',
+const COLORS = {
+  'Dijkstra':               { visited: '#3b82f6', visitedB: '#a855f7', path: '#f59e0b' },
+  'A*':                     { visited: '#22c55e', visitedB: '#a855f7', path: '#f43f5e' },
+  'Bidirectional Dijkstra': { visited: '#3b82f6', visitedB: '#a855f7', path: '#06b6d4' },
 };
 
-const ALGO_DESC = {
-  'Dijkstra':       'Classic BFS with priority queue. Explores all nodes in order of increasing cost. Always optimal. O((V+E) log V).',
-  'A*':             'Uses Manhattan distance as a heuristic to guide the search toward the goal. Visits far fewer nodes than Dijkstra in practice.',
-  'Bidirectional':  'Runs two simultaneous searches from start and end. They meet in the middle, roughly halving the work compared to plain Dijkstra.',
-};
+const map = L.map('map').setView([0, 0], 2);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap © CARTO', maxZoom: 19
+}).addTo(map);
 
-// ─── State ───────────────────────────────────────────────────────────────────
-const canvas  = document.getElementById('grid-canvas');
-const ctx     = canvas.getContext('2d');
-canvas.width  = COLS * CS;
-canvas.height = ROWS * CS;
-
-let walls   = new Uint8Array(ROWS * COLS);
-let display = new Uint8Array(ROWS * COLS);
-let startRC = [2, 2];
-let endRC   = [ROWS - 3, COLS - 3];
-
-let mode    = 'wall';
-let algo    = 'Bidirectional';
-let speed   = 'Normal';
+let data = null;
+let currentAlgo = null;
+let speed = 'Normal';
 let running = false;
 let animTimer = null;
-let mouseDown = false;
+let drawnLayers = [];
 
-// ─── Priority Queue (min-heap) ───────────────────────────────────────────────
-class PQ {
-  constructor() { this.h = []; }
-  push(p, v) {
-    this.h.push([p, v]);
-    let i = this.h.length - 1;
-    while (i > 0) {
-      const par = (i - 1) >> 1;
-      if (this.h[par][0] <= this.h[i][0]) break;
-      [this.h[par], this.h[i]] = [this.h[i], this.h[par]]; i = par;
-    }
-  }
-  pop() {
-    const top = this.h[0], last = this.h.pop();
-    if (this.h.length) {
-      this.h[0] = last; let i = 0;
-      for (;;) {
-        let s = i, l = 2*i+1, r = 2*i+2;
-        if (l < this.h.length && this.h[l][0] < this.h[s][0]) s = l;
-        if (r < this.h.length && this.h[r][0] < this.h[s][0]) s = r;
-        if (s === i) break;
-        [this.h[s], this.h[i]] = [this.h[i], this.h[s]]; i = s;
-      }
-    }
-    return top;
-  }
-  peek() { return this.h[0]; }
-  get size() { return this.h.length; }
-}
+const CFG = { Slow: { delay: 40, batch: 1 }, Normal: { delay: 10, batch: 8 }, Fast: { delay: 1, batch: 80 } };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-const K  = (r, c) => r * COLS + c;
-const KR = k => Math.floor(k / COLS);
-const KC = k => k % COLS;
-const DIRS = [[-1,0],[1,0],[0,-1],[0,1]];
-const MH = (r1,c1,r2,c2) => Math.abs(r1-r2) + Math.abs(c1-c2);
-
-function mkPath(prev, ek) {
-  const p = []; let c = ek;
-  while (c !== -1 && c !== undefined) { p.unshift(c); c = prev[c]; }
-  return p;
-}
-
-// ─── Algorithms ──────────────────────────────────────────────────────────────
-function algoDijkstra(sk, ek) {
-  const dist = new Float32Array(ROWS*COLS).fill(Infinity);
-  const prev = new Int32Array(ROWS*COLS).fill(-1);
-  const vis  = new Uint8Array(ROWS*COLS);
-  const pq   = new PQ();
-  const steps = [];
-  dist[sk] = 0; pq.push(0, sk);
-  while (pq.size) {
-    const [d, k] = pq.pop();
-    if (vis[k]) continue;
-    vis[k] = 1; steps.push(k);
-    if (k === ek) break;
-    const r = KR(k), c = KC(k);
-    for (const [dr, dc] of DIRS) {
-      const nr = r+dr, nc = c+dc;
-      if (nr<0||nr>=ROWS||nc<0||nc>=COLS) continue;
-      const nk = K(nr,nc);
-      if (walls[nk] || vis[nk]) continue;
-      if (d+1 < dist[nk]) { dist[nk]=d+1; prev[nk]=k; pq.push(d+1,nk); }
-    }
-  }
-  return { steps, path: vis[ek] ? mkPath(prev, ek) : [] };
-}
-
-function algoAStar(sk, ek) {
-  const er = KR(ek), ec = KC(ek);
-  const g    = new Float32Array(ROWS*COLS).fill(Infinity);
-  const prev = new Int32Array(ROWS*COLS).fill(-1);
-  const vis  = new Uint8Array(ROWS*COLS);
-  const pq   = new PQ();
-  const steps = [];
-  g[sk] = 0; pq.push(MH(KR(sk),KC(sk),er,ec), sk);
-  while (pq.size) {
-    const [, k] = pq.pop();
-    if (vis[k]) continue;
-    vis[k] = 1; steps.push(k);
-    if (k === ek) break;
-    const r = KR(k), c = KC(k);
-    for (const [dr, dc] of DIRS) {
-      const nr = r+dr, nc = c+dc;
-      if (nr<0||nr>=ROWS||nc<0||nc>=COLS) continue;
-      const nk = K(nr,nc);
-      if (walls[nk] || vis[nk]) continue;
-      const ng = g[k]+1;
-      if (ng < g[nk]) { g[nk]=ng; prev[nk]=k; pq.push(ng+MH(nr,nc,er,ec),nk); }
-    }
-  }
-  return { steps, path: vis[ek] ? mkPath(prev, ek) : [] };
-}
-
-function algoBidir(sk, ek) {
-  const dF = new Float32Array(ROWS*COLS).fill(Infinity);
-  const dB = new Float32Array(ROWS*COLS).fill(Infinity);
-  const pF = new Int32Array(ROWS*COLS).fill(-1);
-  const pB = new Int32Array(ROWS*COLS).fill(-1);
-  const vF = new Uint8Array(ROWS*COLS);
-  const vB = new Uint8Array(ROWS*COLS);
-  const qF = new PQ(), qB = new PQ();
-  const sF = [], sB = [];
-  dF[sk] = 0; qF.push(0, sk);
-  dB[ek] = 0; qB.push(0, ek);
-  let meet = -1, best = Infinity;
-
-  while (qF.size || qB.size) {
-    if (qF.size) {
-      const [d,k] = qF.pop();
-      if (!vF[k]) {
-        vF[k]=1; sF.push(k);
-        if (vB[k] && d+dB[k] < best) { best=d+dB[k]; meet=k; }
-        const r=KR(k),c=KC(k);
-        for (const [dr,dc] of DIRS) {
-          const nr=r+dr,nc=c+dc;
-          if (nr<0||nr>=ROWS||nc<0||nc>=COLS) continue;
-          const nk=K(nr,nc);
-          if (walls[nk]||vF[nk]) continue;
-          if (d+1<dF[nk]) { dF[nk]=d+1; pF[nk]=k; qF.push(d+1,nk); }
-        }
-      }
-    }
-    if (qB.size) {
-      const [d,k] = qB.pop();
-      if (!vB[k]) {
-        vB[k]=1; sB.push(k);
-        if (vF[k] && dF[k]+d < best) { best=dF[k]+d; meet=k; }
-        const r=KR(k),c=KC(k);
-        for (const [dr,dc] of DIRS) {
-          const nr=r+dr,nc=c+dc;
-          if (nr<0||nr>=ROWS||nc<0||nc>=COLS) continue;
-          const nk=K(nr,nc);
-          if (walls[nk]||vB[nk]) continue;
-          if (d+1<dB[nk]) { dB[nk]=d+1; pB[nk]=k; qB.push(d+1,nk); }
-        }
-      }
-    }
-    if (meet >= 0 && qF.size && qB.size && qF.peek()[0]+qB.peek()[0] >= best) break;
-  }
-
-  let path = [];
-  if (meet >= 0) {
-    const fwd = mkPath(pF, meet);
-    const bwd = []; let c = pB[meet];
-    while (c !== -1 && c !== undefined) { bwd.push(c); c = pB[c]; }
-    path = [...fwd, ...bwd];
-  }
-
-  const ml = Math.max(sF.length, sB.length), steps = [];
-  for (let i = 0; i < ml; i++) {
-    if (i < sF.length) steps.push({ k: sF[i], dir: 'F' });
-    if (i < sB.length) steps.push({ k: sB[i], dir: 'B' });
-  }
-  return { steps, path };
-}
-
-// ─── Map generators ──────────────────────────────────────────────────────────
-function genCity() {
-  const w = new Uint8Array(ROWS*COLS);
-  for (let r=0; r<ROWS; r++)
-    for (let c=0; c<COLS; c++) {
-      const road = (r%5 < 2) || (c%6 < 2);
-      if (!road && Math.random() > 0.2) w[K(r,c)] = 1;
-    }
-  return w;
-}
-
-function genMaze() {
-  const w = new Uint8Array(ROWS*COLS).fill(1);
-  const vis = new Uint8Array(ROWS*COLS);
-  function carve(r, c) {
-    vis[K(r,c)] = 1; w[K(r,c)] = 0;
-    const dirs = [[0,2],[0,-2],[2,0],[-2,0]].sort(() => Math.random()-.5);
-    for (const [dr,dc] of dirs) {
-      const nr=r+dr, nc=c+dc;
-      if (nr>0 && nr<ROWS-1 && nc>0 && nc<COLS-1 && !vis[K(nr,nc)]) {
-        w[K(r+dr/2, c+dc/2)] = 0;
-        carve(nr, nc);
-      }
-    }
-  }
-  carve(1,1);
-  return w;
-}
-
-// ─── Drawing ─────────────────────────────────────────────────────────────────
-function draw() {
-  const [sr,sc] = startRC, [er,ec] = endRC;
-
-  ctx.fillStyle = PALETTE.bg;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  for (let r=0; r<ROWS; r++) {
-    for (let c=0; c<COLS; c++) {
-      const k = K(r,c);
-      const isSt = r===sr && c===sc;
-      const isEn = r===er && c===ec;
-      const dv = display[k];
-      let color = null;
-
-      if      (isSt)           color = PALETTE.start;
-      else if (isEn)           color = PALETTE.end;
-      else if (dv===CELL.PATH) color = PALETTE.path;
-      else if (dv===CELL.VF)   color = PALETTE.vf;
-      else if (dv===CELL.VB)   color = PALETTE.vb;
-      else if (walls[k])       color = PALETTE.wall;
-
-      if (color) {
-        ctx.fillStyle = color;
-        ctx.fillRect(c*CS+1, r*CS+1, CS-2, CS-2);
-      }
-    }
-  }
-
-  // Grid lines
-  ctx.strokeStyle = PALETTE.grid;
-  ctx.lineWidth = 0.5;
-  for (let r=0; r<=ROWS; r++) {
-    ctx.beginPath(); ctx.moveTo(0,r*CS); ctx.lineTo(COLS*CS,r*CS); ctx.stroke();
-  }
-  for (let c=0; c<=COLS; c++) {
-    ctx.beginPath(); ctx.moveTo(c*CS,0); ctx.lineTo(c*CS,ROWS*CS); ctx.stroke();
-  }
-
-  // Labels
-  ctx.font = 'bold 11px JetBrains Mono, monospace';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#fff';
-  ctx.fillText('S', sc*CS+CS/2, sr*CS+CS/2);
-  ctx.fillText('E', ec*CS+CS/2, er*CS+CS/2);
-}
-
-// ─── UI state helpers ────────────────────────────────────────────────────────
-function setMode(m) {
-  mode = m;
-  ['wall','erase','start','end'].forEach(x => {
-    const btn = document.getElementById('btn-'+x);
-    btn.className = 'btn-mode' + (x===m ? ' active-'+m : '');
-  });
-  canvas.style.cursor = m==='wall' ? 'crosshair' : m==='erase' ? 'cell' : 'copy';
-}
-
-function setAlgo(a) {
-  algo = a;
-  document.querySelectorAll('.algo-btn').forEach(b => b.classList.remove('selected'));
-  const id = 'algo-' + a.replace('*','*');
-  document.getElementById('algo-' + a.replace('Bidirectional Dijkstra','Bidirectional')).classList.add('selected');
-  document.getElementById('algo-desc').textContent = ALGO_DESC[a] || '';
+function setStatus(type, text) {
+  const el = document.getElementById('status-bar');
+  el.className = 'status-bar show ' + (type || '');
+  el.textContent = text;
 }
 
 function setSpeed(s) {
   speed = s;
-  ['Slow','Normal','Fast'].forEach(x => {
-    document.getElementById('spd-'+x).classList.toggle('selected', x===s);
-  });
+  ['Slow','Normal','Fast'].forEach(x => document.getElementById('spd-'+x).classList.toggle('active', x===s));
 }
 
-function setStatus(type, text) {
-  const el = document.getElementById('status-badge');
-  el.className = 'status-badge';
-  if (type==='running') el.classList.add('status-running');
-  else if (type==='found') el.classList.add('status-found');
-  else if (type==='nope') el.classList.add('status-nope');
-  else el.classList.add('status-idle');
-  el.textContent = text;
+function clearLayers() {
+  drawnLayers.forEach(l => map.removeLayer(l));
+  drawnLayers = [];
 }
 
-function setStats(v, p, t) {
-  document.getElementById('stat-visited').textContent = v;
-  document.getElementById('stat-path').textContent = p;
-  document.getElementById('stat-time').textContent = t;
-}
-
-// ─── Interaction ─────────────────────────────────────────────────────────────
-function cellFromEvent(e) {
-  const rect = canvas.getBoundingClientRect();
-  const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
-  const c = Math.floor((e.clientX - rect.left) * sx / CS);
-  const r = Math.floor((e.clientY - rect.top)  * sy / CS);
-  if (r>=0 && r<ROWS && c>=0 && c<COLS) return [r,c];
-  return null;
-}
-
-function interact(r, c) {
-  if (running) return;
-  const k = K(r,c);
-  if (mode === 'start') { startRC=[r,c]; setMode('wall'); }
-  else if (mode === 'end') { endRC=[r,c]; setMode('wall'); }
-  else if (mode === 'wall') {
-    const [sr,sc]=startRC,[er,ec]=endRC;
-    if ((r===sr&&c===sc)||(r===er&&c===ec)) return;
-    walls[k] = 1;
-  }
-  else if (mode === 'erase') { walls[k] = 0; }
-  draw();
-}
-
-canvas.addEventListener('mousedown', e => {
-  mouseDown = true;
-  const p = cellFromEvent(e); if (p) interact(...p);
-});
-canvas.addEventListener('mousemove', e => {
-  if (!mouseDown || !(mode==='wall'||mode==='erase')) return;
-  const p = cellFromEvent(e); if (p) interact(...p);
-});
-window.addEventListener('mouseup', () => { mouseDown = false; });
-
-// ─── Run / Stop ──────────────────────────────────────────────────────────────
-function toggleRun() {
-  if (running) { stopAnim(); return; }
-  startAnim();
+function clearViz() {
+  stopAnim();
+  clearLayers();
+  document.getElementById('s-visited').textContent = '—';
+  document.getElementById('s-path').textContent = '—';
+  document.getElementById('s-cost').textContent = '—';
+  document.getElementById('s-time').textContent = '—';
+  document.getElementById('info-box').style.display = 'none';
+  setStatus('', 'Ready');
 }
 
 function stopAnim() {
   clearTimeout(animTimer);
   running = false;
-  document.getElementById('run-btn').textContent = '▶  Run';
-  document.getElementById('run-btn').classList.remove('running');
+  const rb = document.getElementById('run-btn');
+  rb.textContent = '▶ Run'; rb.classList.remove('stop');
+}
+
+function toggleRun() {
+  if (running) { stopAnim(); return; }
+  if (!data || !currentAlgo) return;
+  startAnim();
 }
 
 function startAnim() {
-  display = new Uint8Array(ROWS*COLS);
-  draw();
+  clearLayers();
   running = true;
-  document.getElementById('run-btn').textContent = '⏹  Stop';
-  document.getElementById('run-btn').classList.add('running');
-  setStatus('running', 'Running…');
-  setStats('…','…','…');
+  const rb = document.getElementById('run-btn');
+  rb.textContent = '⏹ Stop'; rb.classList.add('stop');
+  setStatus('running', 'Searching…');
 
-  const sk = K(...startRC), ek = K(...endRC);
-  const t0 = performance.now();
+  const result = data.results.find(r => r.algorithm === currentAlgo);
+  if (!result) { stopAnim(); return; }
 
-  let result;
-  if      (algo === 'Dijkstra')      result = algoDijkstra(sk, ek);
-  else if (algo === 'A*')            result = algoAStar(sk, ek);
-  else                               result = algoBidir(sk, ek);
+  const nodes = data.nodes;
+  const colors = COLORS[currentAlgo] || COLORS['Dijkstra'];
+  const visited = result.visited_order;
+  const path = result.path;
 
-  const tAlgo = performance.now() - t0;
-  const { steps, path } = result;
-
-  const CFG = {
-    Slow:   { delay: 30,  batch: 1  },
-    Normal: { delay: 8,   batch: 4  },
-    Fast:   { delay: 1,   batch: 40 },
-  };
   const { delay, batch } = CFG[speed];
   let i = 0;
 
+  function latlon(id) {
+    const pos = nodes[id];
+    if (!pos) return null;
+    return [pos[1], pos[0]]; // osmnx stores [lon, lat], leaflet needs [lat, lon]
+  }
+
   function tick() {
     if (!running) return;
-    if (i >= steps.length) {
-      for (const pk of path) display[pk] = CELL.PATH;
-      draw();
+    if (i >= visited.length) {
+      // draw path
+      const pathCoords = path.map(latlon).filter(Boolean);
+      if (pathCoords.length > 1) {
+        const pl = L.polyline(pathCoords, { color: colors.path, weight: 5, opacity: 0.95 }).addTo(map);
+        drawnLayers.push(pl);
+      }
       stopAnim();
-      const pathLen = path.length ? path.length - 2 : 0; // exclude start/end
-      setStatus(path.length ? 'found' : 'nope', path.length ? `Found — ${pathLen} steps` : 'No path!');
-      setStats(steps.length, path.length || '—', Math.round(tAlgo*100)/100 + ' ms');
+      const found = path.length > 0;
+      setStatus(found ? 'found' : 'nope', found ? `Path found — ${path.length} nodes` : 'No path found!');
+      document.getElementById('s-visited').textContent = result.visited_count.toLocaleString();
+      document.getElementById('s-path').textContent = path.length;
+      document.getElementById('s-cost').textContent = result.path_cost.toFixed(0) + 's';
+      document.getElementById('s-time').textContent = result.compute_ms.toFixed(2) + 'ms';
+      document.getElementById('info-box').style.display = 'block';
+      document.getElementById('info-algo-name').textContent = currentAlgo;
+      document.getElementById('ib-visited').textContent = result.visited_count.toLocaleString();
+      document.getElementById('ib-path').textContent = path.length;
+      document.getElementById('ib-cost').textContent = result.path_cost.toFixed(0) + 's';
+      document.getElementById('ib-time').textContent = result.compute_ms.toFixed(2) + 'ms';
       return;
     }
-    for (let b=0; b<batch && i<steps.length; b++, i++) {
-      const s = steps[i];
-      if (typeof s === 'number') display[s] = CELL.VF;
-      else display[s.k] = s.dir==='F' ? CELL.VF : CELL.VB;
+
+    for (let b = 0; b < batch && i < visited.length; b++, i++) {
+      const id = visited[i];
+      const ll = latlon(id);
+      if (!ll) continue;
+      const isBwd = result.visited_order_bwd && result.visited_order_bwd.includes(id);
+      const c = isBwd ? colors.visitedB : colors.visited;
+      const dot = L.circleMarker(ll, { radius: 3, color: c, fillColor: c, fillOpacity: 0.7, weight: 0 }).addTo(map);
+      drawnLayers.push(dot);
     }
-    draw();
+
     animTimer = setTimeout(tick, delay);
   }
   tick();
 }
 
-// ─── Clear / Preset ──────────────────────────────────────────────────────────
-function clearPath() {
-  stopAnim();
-  display = new Uint8Array(ROWS*COLS);
-  setStatus('idle', 'Ready');
-  setStats('—','—','—');
-  draw();
+function buildAlgoTabs() {
+  const container = document.getElementById('algo-tabs');
+  container.innerHTML = '';
+  if (!data) return;
+  data.results.forEach(r => {
+    const key = r.algorithm;
+    const cls = key === 'Dijkstra' ? 't-dijk' : key === 'A*' ? 't-astar' : 't-bidir';
+    const btn = document.createElement('button');
+    btn.className = 'tab ' + cls + (key === currentAlgo ? ' active' : '');
+    btn.textContent = key;
+    btn.onclick = () => {
+      currentAlgo = key;
+      clearViz();
+      document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+    container.appendChild(btn);
+  });
 }
 
-function clearAll() {
-  stopAnim();
-  walls   = new Uint8Array(ROWS*COLS);
-  display = new Uint8Array(ROWS*COLS);
-  setStatus('idle', 'Ready');
-  setStats('—','—','—');
-  draw();
+function initData(json) {
+  data = json;
+  currentAlgo = data.results[0]?.algorithm || null;
+  buildAlgoTabs();
+  document.getElementById('load-overlay').style.display = 'none';
+
+  // fit map to nodes
+  const coords = Object.values(data.nodes).map(p => [p[1], p[0]]);
+  if (coords.length) {
+    map.fitBounds(L.latLngBounds(coords).pad(0.05));
+  }
+
+  // draw start / end markers
+  const srcPos = data.nodes[data.source];
+  const tgtPos = data.nodes[data.target];
+  if (srcPos) {
+    const m = L.circleMarker([srcPos[1], srcPos[0]], { radius: 9, color: '#fff', weight: 2, fillColor: '#22c55e', fillOpacity: 1 }).addTo(map);
+    m.bindTooltip('Start');
+    drawnLayers.push(m);
+  }
+  if (tgtPos) {
+    const m = L.circleMarker([tgtPos[1], tgtPos[0]], { radius: 9, color: '#fff', weight: 2, fillColor: '#ef4444', fillOpacity: 1 }).addTo(map);
+    m.bindTooltip('End');
+    drawnLayers.push(m);
+  }
+
+  setStatus('', 'Data loaded — press Run to animate');
 }
 
-function loadCity() {
-  stopAnim();
-  walls   = genCity();
-  display = new Uint8Array(ROWS*COLS);
-  setStatus('idle', 'Ready');
-  setStats('—','—','—');
-  draw();
+function loadFile() {
+  const f = document.getElementById('file-input').files[0];
+  if (!f) { alert('Please select a results.json file first.'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    try { initData(JSON.parse(e.target.result)); }
+    catch(err) { alert('Could not parse JSON: ' + err.message); }
+  };
+  reader.readAsText(f);
 }
 
-function loadMaze() {
-  stopAnim();
-  walls   = genMaze();
-  display = new Uint8Array(ROWS*COLS);
-  startRC = [1,1];
-  endRC   = [ROWS-2, COLS%2===0 ? COLS-2 : COLS-3];
-  setStatus('idle', 'Ready');
-  setStats('—','—','—');
-  draw();
+// drag-and-drop
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try { initData(JSON.parse(ev.target.result)); }
+    catch(err) { alert('Could not parse JSON: ' + err.message); }
+  };
+  reader.readAsText(f);
+});
+
+// demo: generate a small fake city so users can preview without running Python
+function loadDemo() {
+  const nodes = {};
+  const cx = 103.8198, cy = 1.3521; // Singapore
+  for (let i = 0; i < 300; i++) {
+    const id = String(i);
+    nodes[id] = [cx + (Math.random()-0.5)*0.06, cy + (Math.random()-0.5)*0.06];
+  }
+
+  function shortestPath(src, tgt) {
+    const adj = {};
+    for (let i = 0; i < 300; i++) {
+      adj[i] = [];
+      for (let j = 0; j < 300; j++) {
+        const dx = nodes[String(i)][0]-nodes[String(j)][0];
+        const dy = nodes[String(i)][1]-nodes[String(j)][1];
+        const d = Math.sqrt(dx*dx+dy*dy);
+        if (d < 0.015 && i !== j) adj[i].push([j, d]);
+      }
+    }
+    const dist = {}, prev = {};
+    const pq = [[0, src]]; dist[src] = 0;
+    while (pq.length) {
+      pq.sort((a,b)=>a[0]-b[0]);
+      const [d, u] = pq.shift();
+      if (u === tgt) break;
+      for (const [v, w] of (adj[u]||[])) {
+        const nd = d + w;
+        if (dist[v] === undefined || nd < dist[v]) { dist[v]=nd; prev[v]=u; pq.push([nd,v]); }
+      }
+    }
+    const path = []; let c = tgt;
+    while (c !== undefined) { path.unshift(String(c)); c = prev[c]; }
+    return path;
+  }
+
+  const visited = Array.from({length:180}, (_,i)=>String(i));
+  const path = shortestPath(0, 299);
+
+  const demo = {
+    nodes,
+    source: '0',
+    target: '299',
+    results: [
+      { algorithm: 'Dijkstra', visited_order: visited, path, path_cost: 0.42, visited_count: 180, compute_ms: 12.4 },
+      { algorithm: 'A*',       visited_order: visited.slice(0,90), path, path_cost: 0.42, visited_count: 90, compute_ms: 6.1 },
+    ]
+  };
+  initData(demo);
 }
 
-// ─── Init ────────────────────────────────────────────────────────────────────
-setAlgo('Bidirectional');
-setSpeed('Normal');
-setMode('wall');
-draw();
+document.getElementById('file-input').addEventListener('change', () => {
+  if (document.getElementById('file-input').files[0]) loadFile();
+});
 </script>
 </body>
 </html>

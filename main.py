@@ -22,14 +22,33 @@ import sys
 import textwrap
 import webbrowser
 import os
+import json
 
 from graph import Graph
 from algorithms import dijkstra, a_star, bidirectional_dijkstra, AlgoResult
 
+def export_results_json(graph, results, src, tgt, out="results.json"):
+    data = {
+        "nodes": {str(n): list(graph.node_pos[n]) for n in graph.node_pos},
+        "results": []
+    }
+    for r in results:
+        data["results"].append({
+            "algorithm": r.algorithm,
+            "visited_order": [str(n) for n in r.visited_order],
+            "path": [str(n) for n in r.path],
+            "path_cost": r.path_cost,
+            "visited_count": r.visited_count,
+            "compute_ms": r.compute_ms,
+        })
+    data["source"] = str(src)
+    data["target"] = str(tgt)
+    with open(out, "w") as f:
+        json.dump(data, f)
+    print(f"Exported results → {out}")
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 #  CLI
-# ─────────────────────────────────────────────────────────────────────────────
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
@@ -59,9 +78,7 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 #  Graph builders
-# ─────────────────────────────────────────────────────────────────────────────
 
 def build_grid_graph(rows: int, cols: int) -> tuple[Graph, tuple, tuple]:
     """Weighted grid with random edge weights in [1, 10]."""
@@ -92,9 +109,7 @@ def build_osm_graph(place: str, source: str, target: str):
     return g, src, tgt
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 #  Run & report
-# ─────────────────────────────────────────────────────────────────────────────
 
 def run_algorithms(g: Graph, src, tgt, which: str) -> list[AlgoResult]:
     runners = {
@@ -108,6 +123,25 @@ def run_algorithms(g: Graph, src, tgt, which: str) -> list[AlgoResult]:
         selected = [runners[which]]
     return [fn() for fn in selected]
 
+import json
+
+def export_results_json(graph, results, src, tgt, out="results.json"):
+    data = {
+        "nodes": {str(n): list(graph.node_pos[n]) for n in graph.node_pos},
+        "source": str(src),
+        "target": str(tgt),
+        "results": [{
+            "algorithm":     r.algorithm,
+            "visited_order": [str(n) for n in r.visited_order],
+            "path":          [str(n) for n in r.path],
+            "path_cost":     r.path_cost,
+            "visited_count": r.visited_count,
+            "compute_ms":    r.compute_ms,
+        } for r in results]
+    }
+    with open(out, "w") as f:
+        json.dump(data, f)
+    print(f"Exported results → {out}")
 
 def print_comparison(results: list[AlgoResult]) -> None:
     line = "─" * 72
@@ -128,9 +162,7 @@ def print_comparison(results: list[AlgoResult]) -> None:
     print()
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 #  Matplotlib visualisation  (grid / csv)
-# ─────────────────────────────────────────────────────────────────────────────
 
 def visualise_matplotlib(g: Graph, results: list[AlgoResult], src, tgt,
                          out: str = 'comparison.png') -> None:
@@ -211,9 +243,7 @@ def visualise_matplotlib(g: Graph, results: list[AlgoResult], src, tgt,
     plt.show()
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 #  Folium interactive map  (OSM mode)
-# ─────────────────────────────────────────────────────────────────────────────
 
 # Colour scheme per algorithm  (folium uses hex strings)
 _ALGO_COLORS = {
@@ -256,7 +286,7 @@ def visualise_folium(graph: Graph, results: list[AlgoResult],
                                   {'visited': '#94a3b8', 'path': '#f59e0b'})
         fg = folium.FeatureGroup(name=result.algorithm, show=True)
 
-        # ── Visited nodes (small dots) ───────────────────────────────────────
+        # ── Visited nodes (small dots)
         # Limit to at most 4000 dots so the HTML stays fast
         sampled = result.visited_order
         if len(sampled) > 4000:
@@ -278,7 +308,7 @@ def visualise_folium(graph: Graph, results: list[AlgoResult],
                 tooltip=f"{result.algorithm}: visited node",
             ).add_to(fg)
 
-        # ── Path polyline ────────────────────────────────────────────────────
+        # ── Path polyline 
         if result.path:
             path_coords = [
                 _latlon(graph, n)
@@ -299,7 +329,7 @@ def visualise_folium(graph: Graph, results: list[AlgoResult],
 
         fg.add_to(m)
 
-    # ── Source & target markers ──────────────────────────────────────────────
+    # ── Source & target markers 
     if src in graph.node_pos:
         lat, lon = _latlon(graph, src)
         folium.Marker(
@@ -316,7 +346,7 @@ def visualise_folium(graph: Graph, results: list[AlgoResult],
             icon=folium.Icon(color='red', icon='stop', prefix='fa'),
         ).add_to(m)
 
-    # ── Stats legend (HTML panel) ────────────────────────────────────────────
+    # ── Stats legend (HTML panel) 
     legend_rows = "".join(
         f"<tr>"
         f"<td style='padding:4px 8px;color:{_ALGO_COLORS.get(r.algorithm,{}).get('path','#fff')};font-weight:bold'>"
@@ -361,7 +391,7 @@ def visualise_folium(graph: Graph, results: list[AlgoResult],
     # Layer control to toggle each algorithm's layer
     folium.LayerControl(collapsed=False).add_to(m)
 
-    # ── Save & open ──────────────────────────────────────────────────────────
+    # ── Save & open 
     m.save(out)
     abs_path = os.path.abspath(out)
     print(f"\nInteractive map saved → {out}")
@@ -369,16 +399,14 @@ def visualise_folium(graph: Graph, results: list[AlgoResult],
     webbrowser.open(f"file://{abs_path}")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 #  Entry point
-# ─────────────────────────────────────────────────────────────────────────────
 
 def main() -> None:
     random.seed(42)
     args = build_parser().parse_args()
 
     print()
-    # ── Build graph ──────────────────────────────────────────────────────────
+    # ── Build graph 
     if args.mode == 'grid':
         print(f"Building {args.rows}×{args.cols} random-weight grid graph…")
         g, src, tgt = build_grid_graph(args.rows, args.cols)
@@ -395,19 +423,20 @@ def main() -> None:
     print(f"  Graph : {g}")
     print(f"  Source: {src}  →  Target: {tgt}\n")
 
-    # ── Run algorithms ───────────────────────────────────────────────────────
+    # ── Run algorithms 
     print("Running algorithms…")
     results = run_algorithms(g, src, tgt, args.algo)
 
-    # ── Print table ──────────────────────────────────────────────────────────
+    # ── Print table 
     print_comparison(results)
 
-    # ── Visualise ────────────────────────────────────────────────────────────
+    # ── Visualise 
     if args.no_viz:
         return
 
     if args.mode == 'osm':
         # Interactive folium map — opens in browser automatically
+        export_results_json(g, results, src, tgt)
         visualise_folium(g, results, src, tgt,
                          place=args.place,
                          out='route_map.html')

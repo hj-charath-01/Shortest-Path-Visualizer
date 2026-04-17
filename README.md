@@ -105,7 +105,6 @@ Open `pathfinder.html` in any modern browser. No build step required.
 
 **Controls:**
 
-|--------------------|------------------------------------------------------|
 | Action             | How                                                  |
 |--------------------|------------------------------------------------------|
 | Switch algorithm   | Click a tab (Dijkstra / A* / Bidirectional Dijkstra) |

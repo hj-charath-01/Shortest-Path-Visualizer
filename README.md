@@ -113,7 +113,6 @@ Open `pathfinder.html` in any modern browser. No build step required.
 | Clear overlay      | Press **Clear**                                      |
 | Adjust speed       | **Slow / Normal / Fast** buttons                     |
 | Toggle layers      | Use the layer control (top-right of map)             |
-|--------------------|------------------------------------------------------|
 
 Stats (visited nodes, path length, cost, compute time) are displayed in the top bar
 and in a detail panel once the animation completes.

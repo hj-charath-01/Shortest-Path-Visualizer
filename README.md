@@ -1,4 +1,4 @@
-# 🗺 Route Planner — Advanced Graph Algorithms Project
+# Route Planner
 
 An interactive city-map route planner implementing and comparing three
 classic shortest-path algorithms with step-by-step animation.
@@ -10,8 +10,8 @@ classic shortest-path algorithms with step-by-step animation.
 ```
 ├── graph.py          Weighted directed/undirected graph + OSMnx loader
 ├── algorithms.py     Dijkstra · A* · Bidirectional Dijkstra
-├── main.py           CLI benchmark + matplotlib visualiser
-├── pathfinder.jsx    Interactive browser visualiser (React)
+├── main.py           CLI benchmark + matplotlib/folium visualiser
+├── pathfinder.html   Interactive browser visualiser (Leaflet.js)
 └── README.md
 ```
 
@@ -19,11 +19,11 @@ classic shortest-path algorithms with step-by-step animation.
 
 ## Algorithms Implemented
 
-| Algorithm | Complexity | Notes |
-|-----------|-----------|-------|
-| **Dijkstra** | O((V+E) log V) | Optimal, explores uniformly in all directions |
-| **A\*** | O((V+E) log V) worst-case | Heuristic guides search; far fewer nodes visited |
-| **Bidirectional Dijkstra** | ~½ Dijkstra | Two simultaneous frontiers meeting in the middle |
+| Algorithm                  | Complexity                | Notes                                            |
+|----------------------------|---------------------------|--------------------------------------------------|
+| **Dijkstra**               | O((V+E) log V)            | Optimal, explores uniformly in all directions    |
+| **A\***                    | O((V+E) log V) worst-case | Heuristic guides search; far fewer nodes visited |
+| **Bidirectional Dijkstra** | ~½ Dijkstra               | Two simultaneous frontiers meeting in the middle |
 
 ---
 
@@ -31,7 +31,7 @@ classic shortest-path algorithms with step-by-step animation.
 
 ```bash
 # Install dependencies
-pip install matplotlib osmnx   # osmnx optional — only needed for real map data
+pip install matplotlib osmnx folium   # osmnx + folium optional — only needed for real map data
 
 # Run on a random 30×40 weighted grid, compare all three algorithms
 python main.py --mode grid --rows 30 --cols 40
@@ -44,6 +44,12 @@ python main.py --mode csv --file my_roads.csv --source A --target Z
 
 # Run only A* (skip the others)
 python main.py --mode grid --algo astar
+
+# Skip visualisation (print table only)
+python main.py --mode grid --no-viz
+
+# Save matplotlib comparison chart to a custom filename
+python main.py --mode grid --out my_chart.png
 ```
 
 Sample output:
@@ -67,20 +73,51 @@ Speedup (nodes visited vs Dijkstra baseline):
 
 ---
 
-## Interactive Visualiser (React)
+## Visualisation Modes
 
-Open `pathfinder.jsx` as a Claude artifact or drop it into a React project.
+### Grid / CSV — Matplotlib
+
+Running in `grid` or `csv` mode produces a side-by-side matplotlib comparison chart
+(saved to `comparison.png` by default). Each panel shows visited nodes (green),
+the shortest path (amber), and start/end markers.
+
+### OSM — Interactive Folium Map
+
+Running in `osm` mode opens an interactive Leaflet map in your browser (`route_map.html`).
+Each algorithm gets its own toggleable layer; a stats legend is pinned to the bottom of the page.
+
+It also exports `results.json` — a machine-readable snapshot of node positions, visited
+orders, and paths — which can be loaded directly into the browser visualiser below.
+
+---
+
+## Interactive Browser Visualiser (`pathfinder.html`)
+
+Open `pathfinder.html` in any modern browser. No build step required.
+
+**Loading data:**
+
+| Method          | How                                                                   |
+|-----------------|-----------------------------------------------------------------------|
+| From Python run | Run `python main.py --mode osm …` → drag `results.json` onto the page |
+| File picker     | Click **Load results.json** and select the file                       |
+| Demo mode       | Click **Try Demo** to explore a synthetic Singapore dataset           |
 
 **Controls:**
-| Action | How |
-|--------|-----|
-| Draw walls | Click and drag on the grid |
-| Erase walls | Switch to **Erase** mode |
-| Place start/end | Click **Start** or **End** mode, then click a cell |
-| Generate city | **City** button — creates a block-grid street map |
-| Generate maze | **Maze** button — perfect maze via recursive DFS |
-| Run algorithm | Choose algorithm + speed, then **RUN** |
-| Compare | Run each algorithm on the same layout, note the stats |
+
+|--------------------|------------------------------------------------------|
+| Action             | How                                                  |
+|--------------------|------------------------------------------------------|
+| Switch algorithm   | Click a tab (Dijkstra / A* / Bidirectional Dijkstra) |
+| Animate search     | Press **▶ Run**                                      |
+| Stop mid-animation | Press **⏹ Stop**                                     |
+| Clear overlay      | Press **Clear**                                      |
+| Adjust speed       | **Slow / Normal / Fast** buttons                     |
+| Toggle layers      | Use the layer control (top-right of map)             |
+|--------------------|------------------------------------------------------|
+
+Stats (visited nodes, path length, cost, compute time) are displayed in the top bar
+and in a detail panel once the animation completes.
 
 ---
 
